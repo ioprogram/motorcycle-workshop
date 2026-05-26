@@ -36,21 +36,43 @@ here are cheap — gaps found during code review are expensive.
 - Token validity: 48h, max 3 renewals, then CANCELLED
 - Full order status machine including REJECTED and CANCELLED
 
+## Step 4 — REASONS Canvas
+**Command:** `/spdd-analysis` (REASONS canvas prompt)  
+**Artifact:** `docs/step-4-reasons-canvas.md`
+
+**Why this step exists:**
+Transforms the domain model into a precise implementation blueprint across 7 dimensions.
+The canvas is the single document a developer needs to start writing code: what to build,
+every entity, every endpoint, and every constraint — no ambiguity left.
+
+**What this step locked in:**
+- Full Definition of Done (AC1–AC5 + non-functional)
+- All JPA entities with enumerations and state-machine enum
+- 18 operations (O-01 through O-18) with auth, steps, and HTTP responses
+- Package structure under `com.workshop` (hexagonal architecture)
+- Norms: naming, validation, logging, error-handling contract, test standards
+- 9 non-negotiable safeguards (SG-01 through SG-09)
+
+---
+
 ## Step 3 — Domain Analysis
-**Command:** SPDD domain-analysis prompt  
+**Command:** `/spdd-analysis`  
 **Artifact:** `docs/step-3-domain-analysis.md`
 
 **Why this step exists:**
-Before touching a single Java class, the domain must be fully modeled.
-This step translates business language into precise technical entities,
-rules, and risks — so the implementation phase has no guesswork.
+The AI reads the structured documents from steps 1 and 2 and produces
+a formal domain model — entities, business rules, risks, and open
+questions. Because the input is clean and unambiguous, the output is
+precise and reviewable. We then resolve the open questions as humans
+before moving forward.
 
 **What this step locked in:**
-- 7 entities: RepairOrder (aggregate root), Customer, Motorcycle, LineItem, InspectionChecklist, QuoteToken, User
-- 11 explicit + 8 implicit business rules
-- State machine with `OrderStatus.canTransitionTo()` pattern
-- Token security: store SHA-256 hash only; CAS atomic update for single-use guarantee
-- Optimistic locking (`@Version`) on RepairOrder for concurrent modification safety
-- Partial unique index on `quote_tokens` for single-active-token guarantee
-- 10 risks identified (R-01 through R-10)
-- 8 open questions surfaced (OQ-01 through OQ-08) — must be resolved before implementation
+- 7 domain entities with fields and relationships
+- 19 business rules (11 explicit + 8 implicit)
+- Token generated at APPROVED state (not QUOTED)
+- CANCELLED reachable from APPROVED only
+- Token invalidated on line-item change (no renewal slot consumed)
+- Inline customer/motorcycle creation allowed
+- SM is the only actor who can COMPLETE an order
+- Hexagonal architecture + enum state machine (no Spring State Machine)
+- CAS atomic update for token single-use guarantee
