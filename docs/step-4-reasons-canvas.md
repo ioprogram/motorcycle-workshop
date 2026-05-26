@@ -483,10 +483,10 @@ Request body:
   { "fullName": "string (required)", "phone": "string (required)", "email": "string (optional)" }
 
 Steps:
-  1. Validate: fullName not blank, phone not blank → 400 on failure
-  2. Create Customer { id=UUID.randomUUID(), fullName, phone, email }
-  3. customerRepository.save(customer)
-  4. Return CustomerResponse
+Steps:
+  1. Load order (with optimistic lock) → 404
+  2. Guard: order.status == QUOTED → else 409
+  3. Generate token:
 
 Response:  201 Created
 Body:      { "id": UUID, "fullName": string, "phone": string, "email": string|null }
