@@ -97,6 +97,7 @@ public class RepairOrder {
         this.updatedAt = Instant.now();
     }
 
+    // Called once at order creation only. InspectionChecklist is immutable after attachment.
     public void setInspectionChecklist(InspectionChecklist checklist) {
         this.inspectionChecklist = checklist;
     }

@@ -76,3 +76,24 @@ before moving forward.
 - SM is the only actor who can COMPLETE an order
 - Hexagonal architecture + enum state machine (no Spring State Machine)
 - CAS atomic update for token single-use guarantee
+
+## Step 4 — REASONS Canvas
+**Command:** `/spdd-reasons-canvas`  
+**Artifact:** `docs/step-4-reasons-canvas.md`
+
+**Why this step exists:**
+The canvas translates all previous documents into an executable blueprint.
+Each REASONS dimension locks in a different type of decision: what to build,
+what entities exist, which patterns to use, where code lives, how each
+operation works step by step, what standards apply, and what can never
+be violated. The AI generates this from clean input; the human reviews
+and corrects it before any code is written.
+
+**What this step locked in:**
+- 18 operations with full pseudocode (O-01 to O-18)
+- Hexagonal architecture: domain core + ports + adapters
+- SHA-256 token hashing; raw token returned once, never stored
+- CAS atomic SQL update for token single-use guarantee
+- 9 non-negotiable safeguards (SG-01 to SG-09)
+- Redundant guard removed from O-11 (isTerminal() is sufficient)
+- State machine diagram corrected: CANCELLED reachable from APPROVED only

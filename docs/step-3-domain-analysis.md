@@ -183,20 +183,17 @@ RepairOrder ──< QuoteToken
 
 ## 3. Order Status Machine
 
-```
-                             ┌─────────────────────────────┐
-                             │                             │
-  DRAFT ──[generate quote]──► QUOTED ──[SM approves]──► APPROVED ──[customer approves]──► IN_PROGRESS ──[work done]──► COMPLETED
-                               │                              │
-                               │ [customer/SM rejects]        │ [3rd token expiry]
-                               ▼                              ▼
-                            REJECTED                      CANCELLED
-```
+DRAFT --[mechanic generates quote]--> QUOTED --[SM approves internally]--> APPROVED --[customer approves]--> IN_PROGRESS --[SM marks done]--> COMPLETED
+                                                                               |                    |
+                                                              [SM or customer rejects]    [3rd token expiry]
+                                                                               v                    v
+                                                                           REJECTED            CANCELLED
 
-> **Critical ambiguity — see OQ-01 and OQ-02 in §5.**  
-> The clarification document places `QUOTED → CANCELLED` in the state machine diagram,  
-> but its ACs suggest tokens are generated at the `APPROVED` state, making  
-> `APPROVED → CANCELLED` the logically consistent transition. Both cannot be true simultaneously.
+**Key decisions:**
+- Token is generated when SM approves (APPROVED), not when mechanic generates quote (QUOTED)
+- CANCELLED is reachable from APPROVED only (not from QUOTED)
+- Token invalidation on line-item change does NOT consume a renewal slot
+- Only SM can mark an order as COMPLETED
 
 ---
 
@@ -354,17 +351,15 @@ Check `rowsAffected == 1`; if 0, the token was already used or expired (return 4
 
 ---
 
-## 6. Open Questions
+## 6. Open Questions — Resolved
 
-> These ambiguities survived the clarification document and must be resolved before implementation begins.
-
-| ID | Question | Impact |
+| ID | Question | Decision |
 |---|---|---|
-| **OQ-01** | **Two-phase vs. single approval**: The original story says customer approval → `APPROVED`. The clarification says Shop Manager approval → `APPROVED`, then customer → `IN_PROGRESS`. Which model is correct? | Affects the entire state machine, token lifecycle, and role permissions. |
-| **OQ-02** | **Token generation point**: Is the approval token generated when the quote is created (`QUOTED` state) or when the Shop Manager approves (`APPROVED` state)? The two documents conflict. This determines from which state `CANCELLED` is reachable. | Affects token service design, scheduled job, and state diagram. |
-| **OQ-03** | **Token renewal trigger**: Who initiates a renewal — Mechanic, Shop Manager, or is it automatic on expiry? Is there a UI action? Is the renewal logged with actor + timestamp? | Affects `QuoteTokenService` API and audit trail. |
-| **OQ-04** | **Line-item change after token issued**: If Shop Manager modifies line items on a `QUOTED` order (changing the total), should the active customer token be invalidated (price seen by customer is now wrong) and a new one generated? Does this consume a renewal slot? | Significant UX and business rule impact. |
-| **OQ-05** | **Mechanic notification**: The story says "Mechanic is notified when the customer approves," but email/push is out of scope. Is the notification fulfilled entirely by the order appearing in a "Ready to Work" dashboard list, or is an in-app notification entity needed? | Affects data model (Notification entity?) and frontend requirements. |
-| **OQ-06** | **Customer minimum data**: Is a Customer always pre-existing before order creation, or can the Mechanic register a new Customer inline? What fields are mandatory (name only? name + phone?)? | Affects `POST /api/orders` payload and Customer repository. |
-| **OQ-07** | **Motorcycle minimum data**: Same question as OQ-06 for Motorcycle. AC1 says "existing motorcycle"; what fields are required beyond license plate? | Affects Motorcycle registration flow. |
-| **OQ-08** | **IN_PROGRESS → COMPLETED trigger**: What action and by whom transitions an order to `COMPLETED`? No acceptance criterion covers this. Is it a manual Mechanic/Manager action? | Missing AC for a key state. |
+| OQ-01 | Two-phase vs. single approval | **Two-phase**: SM approves internally → APPROVED; customer approves → IN_PROGRESS |
+| OQ-02 | Token generation point | **At APPROVED** — token generated when SM approves, not when mechanic generates quote |
+| OQ-03 | Token renewal trigger | **Manual by SM** — customer requests renewal, SM performs it from the UI |
+| OQ-04 | Line-item change after token issued | **Token invalidated** — new token generated; does NOT consume a renewal slot |
+| OQ-05 | Mechanic notification | **Dashboard only** — order appears in "Ready to Work" list; no Notification entity needed |
+| OQ-06 | Customer minimum data | **Inline creation** — mechanic creates customer on the fly if not found; required fields: fullName + phone |
+| OQ-07 | Motorcycle minimum data | **Inline creation** — mechanic creates motorcycle on the fly if not found; required fields: licensePlate + make + model + year |
+| OQ-08 | IN_PROGRESS → COMPLETED trigger | **SM only** — Shop Manager manually marks the order as COMPLETED |
